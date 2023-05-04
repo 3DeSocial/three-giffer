@@ -27,6 +27,7 @@
 		"format": "prettier --write ."
 	},
 	"dependencies": {
+		"gifler": "^0.1.0",
 		"gifuct-js": "^2.1.2",
 		"three": "^0.144.0"
 	},

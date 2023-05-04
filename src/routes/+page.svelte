@@ -14,4 +14,4 @@
 	<meta name="description" content="Three.js example app built with Svelte" />
 </svelte:head>
 
-<canvas bind:this={el} />
+<canvas style="display:none;" bind:this={el} />

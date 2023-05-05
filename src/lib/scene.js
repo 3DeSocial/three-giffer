@@ -34,7 +34,7 @@ const loadGifAsSpritesheet = async (url) => {
 };
 
 
-const createCubeWithGifTexture = async (url) => {
+const createSpheresWithGifTextures = async (urls) => {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
     75,
@@ -46,41 +46,67 @@ const createCubeWithGifTexture = async (url) => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  const [spritesheetTexture, frames] = await loadGifAsSpritesheet(url);
+  const spheres = [];
+  const frameSets = [];
 
-  const geometry = new THREE.BoxGeometry();
-  const materials = [
-    new THREE.MeshBasicMaterial({ map: spritesheetTexture }),
-    new THREE.MeshBasicMaterial({ map: spritesheetTexture }),
-    new THREE.MeshBasicMaterial({ map: spritesheetTexture }),
-    new THREE.MeshBasicMaterial({ map: spritesheetTexture }),
-    new THREE.MeshBasicMaterial({ map: spritesheetTexture }),
-    new THREE.MeshBasicMaterial({ color: 0xffffff }),
-  ];
-  const cube = new THREE.Mesh(geometry, materials);
-  scene.add(cube);
+  for (const url of urls) {
+    const [spritesheetTexture, frames] = await loadGifAsSpritesheet(url);
 
-  camera.position.z = 2;
-  camera.position.y = 0;
+    const geometry = new THREE.SphereGeometry(2.5, 32, 32);
+    const material = new THREE.MeshBasicMaterial({ map: spritesheetTexture });
+    const sphere = new THREE.Mesh(geometry, material);
+
+    spheres.push(sphere);
+    frameSets.push(frames);
+    scene.add(sphere);
+  }
+
+  // Position spheres in a horizontal circle
+  const circleRadius = 10;
+  const angleBetweenSpheres = (2 * Math.PI) / spheres.length;
+  spheres.forEach((sphere, index) => {
+    sphere.position.x = circleRadius * Math.cos(index * angleBetweenSpheres);
+    sphere.position.z = circleRadius * Math.sin(index * angleBetweenSpheres);
+  });
+
+  camera.position.z = 20;
+  camera.position.y = 10;
+  camera.lookAt(new THREE.Vector3(0, 0, 0));
+
   const clock = new THREE.Clock();
 
-  let currentFrame = 0;
-  let frameElapsedTime = 0;
+  const currentFrames = new Array(urls.length).fill(0);
+  const frameElapsedTimes = new Array(urls.length).fill(0);
+  let rotationAngle = 0;
+  const rotationSpeed = 0.01;
+
   const animate = () => {
     requestAnimationFrame(animate);
 
     const deltaTime = clock.getDelta() * 1000; // Convert to milliseconds
-    const frameDelay = frames[currentFrame].delay || 100;
-    if (frameElapsedTime >= frameDelay) {
-      currentFrame = (currentFrame + 1) % frames.length;
-      spritesheetTexture.offset.x = currentFrame / frames.length;
-      frameElapsedTime = 0;
-    } else {
-      frameElapsedTime += deltaTime;
-    }
 
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
+    spheres.forEach((sphere, index) => {
+      const frames = frameSets[index];
+      const frameDelay = frames[currentFrames[index]].delay || 100;
+      if (frameElapsedTimes[index] >= frameDelay) {
+        currentFrames[index] = (currentFrames[index] + 1) % frames.length;
+        sphere.material.map.offset.x = currentFrames[index] / frames.length;
+        frameElapsedTimes[index] = 0;
+      } else {
+        frameElapsedTimes[index] += deltaTime;
+      }
+    });
+
+    // Rotate the circle of spheres
+    rotationAngle += rotationSpeed;
+    spheres.forEach((sphere, index) => {
+      const angle = index * angleBetweenSpheres + rotationAngle;
+      sphere.position.x = circleRadius * Math.cos(angle);
+      sphere.position.z = circleRadius * Math.sin(angle);
+      sphere.rotation.x += 0.01;
+      sphere.rotation.y += 0.01;      
+    });
+
     renderer.render(scene, camera);
   };
 
@@ -88,7 +114,12 @@ const createCubeWithGifTexture = async (url) => {
 };
 
 export const createScene = (el) => {
- 
-createCubeWithGifTexture('starwarscats.gif');
+  createSpheresWithGifTextures([
+    'starwarscats.gif',
+    'dankata.gif',
+    'star-wars-tie-fighter.gif',
+    'sabers.gif',
+    'yay.gif'
+  ]);
 };
 

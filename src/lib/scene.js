@@ -1,5 +1,40 @@
 import * as THREE from 'three';
 import { parseGIF, decompressFrames } from 'gifuct-js';
+const scene = new THREE.Scene();
+let skyMesh = null;
+const loadSkybox = ()=>{
+    let that = this;
+
+    const geometry = new THREE.SphereGeometry( 500, 60, 40 );
+    // invert the geometry on the x-axis so that all of the faces point inward
+    geometry.scale( - 1, 1, 1 );
+    let fullImagePath = '/scifi_star_wars_imperial_fleet_in_deep_space.jpg';
+    try{
+      let loader = new THREE.TextureLoader();
+      loader.load(
+          fullImagePath,
+          function ( texture ) {
+              // create a material using the loaded texture
+
+              const material = new THREE.MeshBasicMaterial( { map: texture } );
+
+              skyMesh = new THREE.Mesh( geometry, material );
+
+              
+              scene.add( skyMesh );
+          },
+          function ( xhr ) {
+              console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+          },
+          function ( error ) {
+              console.error( 'An error happened', error );
+          }
+      );
+    } catch(error){
+        console.log('could not load texture');
+        console.log(error);
+    }
+}
 
 const createSpritesheet = (frames) => {
   const spritesheetCanvas = document.createElement('canvas');
@@ -35,7 +70,7 @@ const loadGifAsSpritesheet = async (url) => {
 
 
 const createSpheresWithGifTextures = async (urls) => {
-  const scene = new THREE.Scene();
+
   const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
@@ -52,7 +87,7 @@ const createSpheresWithGifTextures = async (urls) => {
   for (const url of urls) {
     const [spritesheetTexture, frames] = await loadGifAsSpritesheet(url);
 
-    const geometry = new THREE.SphereGeometry(2.5, 32, 32);
+    const geometry = new THREE.SphereGeometry(5, 32, 32);
     const material = new THREE.MeshBasicMaterial({ map: spritesheetTexture });
     const sphere = new THREE.Mesh(geometry, material);
 
@@ -62,15 +97,15 @@ const createSpheresWithGifTextures = async (urls) => {
   }
 
   // Position spheres in a horizontal circle
-  const circleRadius = 10;
+  const circleRadius = 15;
   const angleBetweenSpheres = (2 * Math.PI) / spheres.length;
   spheres.forEach((sphere, index) => {
     sphere.position.x = circleRadius * Math.cos(index * angleBetweenSpheres);
     sphere.position.z = circleRadius * Math.sin(index * angleBetweenSpheres);
   });
 
-  camera.position.z = 20;
-  camera.position.y = 10;
+  camera.position.z = 25;
+  camera.position.y = 15;
   camera.lookAt(new THREE.Vector3(0, 0, 0));
 
   const clock = new THREE.Clock();
@@ -105,6 +140,9 @@ const createSpheresWithGifTextures = async (urls) => {
       sphere.position.z = circleRadius * Math.sin(angle);
       sphere.rotation.x += 0.01;
       sphere.rotation.y += 0.01;      
+      if(skyMesh){
+        skyMesh.rotation.y -= 0.001;
+      }
     });
 
     renderer.render(scene, camera);
@@ -114,6 +152,7 @@ const createSpheresWithGifTextures = async (urls) => {
 };
 
 export const createScene = (el) => {
+  loadSkybox();
   createSpheresWithGifTextures([
     'starwarscats.gif',
     'dankata.gif',

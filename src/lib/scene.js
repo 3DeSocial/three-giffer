@@ -7,8 +7,6 @@ let worker = null;
 const loadWorker = async () => {
 
   worker = new Worker(workerURL, { type: "module" });
-  worker.postMessage({ msg: 'start' });
-  console.log(worker);
 };
 
 
@@ -79,7 +77,7 @@ const loadGifAsSpritesheet = async (url) => {
   return [spritesheetTexture, frames];
 };
 
-const createSpheresWithGifTextures = async (gifUrls, circleRadius) => {
+const createSpheresWithGifTextures = async (gifUrls, circleRadius, sphereDiameter, distanceBetweenSpheres) => {
 
   const camera = new THREE.PerspectiveCamera(
     75,
@@ -87,22 +85,29 @@ const createSpheresWithGifTextures = async (gifUrls, circleRadius) => {
     0.1,
     1000
   );
-  camera.position.z = 25;
+  camera.position.z = 50;
   camera.position.y = 15;  
+  camera.lookAt(new THREE.Vector3(0,0,0));
   const renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
-    
-  let rotationSpeed = 0.05; 
+
+  let rotationSpeed = 1; 
   const spheres = [];
   const sharedBuffer = new SharedArrayBuffer(Float64Array.BYTES_PER_ELEMENT * (1 + gifUrls.length * 5));
   const sharedArray = new Float64Array(sharedBuffer);
-  const frameSets = await Promise.all(gifUrls.map(loadGifAsSpritesheet));
+  const gifFrameSets = await Promise.all(gifUrls.map(loadGifAsSpritesheet));
   const geometry = new THREE.SphereGeometry(5, 32, 32);
-  const angleBetweenSpheres = (2 * Math.PI) / gifUrls.length;
 
-  frameSets.forEach((frameSet, index) => {
+  const circleCircumference = 2 * Math.PI * circleRadius;
+  const numberOfPositions = circleCircumference / (sphereDiameter + distanceBetweenSpheres);
+  const angleBetweenSpheres = (2 * Math.PI) / numberOfPositions;
+
+  let frameSets = [];
+  gifFrameSets.forEach((frameSet, index) => {
     const [spritesheetTexture, frames] = frameSet;
+    frameSets.push(frames);
+
     const material = new THREE.MeshBasicMaterial({ map: spritesheetTexture });
     const sphere = new THREE.Mesh(geometry, material);
     const angle = angleBetweenSpheres * index;
@@ -116,24 +121,26 @@ const createSpheresWithGifTextures = async (gifUrls, circleRadius) => {
     spheresCount: spheres.length,
     angleBetweenSpheres,
     rotationSpeed,
-    frameSets: frameSets.map((frameSet) => frameSet.map((frame) => ({ delay: frame.delay }))),
+    frameSets,
+    sphereDiameter,
+    distanceBetweenSpheres
   });
-  
+
   const animate = () => {
     requestAnimationFrame(animate);
-  
+
     spheres.forEach((sphere, index) => {
       sphere.position.set(sharedArray[1 + gifUrls.length * 3 + index * 2], 0, sharedArray[1 + gifUrls.length * 3 + index * 2 + 1]);
       if (sphere.material.map) {
         sphere.material.map.offset.x = sharedArray[1 + gifUrls.length + index] / frameSets[index].length;
       }
     });
+
     if(skyMesh){
       skyMesh.rotation.y -= 0.001;
     }
     renderer.render(scene, camera);
   };
-  
 
   animate();
 };
@@ -151,6 +158,26 @@ export const createScene = (el) => {
     'dankata.gif',
     'star-wars-tie-fighter.gif',
     'sabers.gif',
+    'yay.gif',
+    'starwarscats.gif',
+    'dankata.gif',
+    'star-wars-tie-fighter.gif',
+    'sabers.gif',
+    'yay.gif',
+    'starwarscats.gif',
+    'dankata.gif',
+    'star-wars-tie-fighter.gif',
+    'sabers.gif',
+    'yay.gif',
+    'starwarscats.gif',
+    'dankata.gif',
+    'star-wars-tie-fighter.gif',
+    'sabers.gif',
+    'yay.gif',
+    'starwarscats.gif',
+    'dankata.gif',
+    'star-wars-tie-fighter.gif',
+    'sabers.gif',
     'yay.gif'
-  ],15);
+  ],15, 5, 5);
 };

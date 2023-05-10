@@ -1,17 +1,7 @@
 import * as THREE from 'three';
 import { parseGIF, decompressFrames } from 'gifuct-js';
-import workerURL from '$lib/my.worker.js?url';
 const scene = new THREE.Scene();
 let skyMesh = null;
-let worker = null;
-const loadWorker = async () => {
-
-  worker = new Worker(workerURL, { type: "module" });
-  worker.postMessage({ msg: 'start' });
-  console.log(worker);
-};
-
-
 const loadSkybox = ()=>{
     let that = this;
 
@@ -46,7 +36,6 @@ const loadSkybox = ()=>{
     }
 }
 
-
 const createSpritesheet = (frames) => {
   const spritesheetCanvas = document.createElement('canvas');
   spritesheetCanvas.width = frames[0].dims.width * frames.length;
@@ -79,7 +68,8 @@ const loadGifAsSpritesheet = async (url) => {
   return [spritesheetTexture, frames];
 };
 
-const createSpheresWithGifTextures = async (gifUrls, circleRadius) => {
+
+const createSpheresWithGifTextures = async (urls) => {
 
   const camera = new THREE.PerspectiveCamera(
     75,
@@ -87,64 +77,81 @@ const createSpheresWithGifTextures = async (gifUrls, circleRadius) => {
     0.1,
     1000
   );
-  camera.position.z = 25;
-  camera.position.y = 15;  
   const renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
-    
-  let rotationSpeed = 0.05; 
-  const spheres = [];
-  const sharedBuffer = new SharedArrayBuffer(Float64Array.BYTES_PER_ELEMENT * (1 + gifUrls.length * 5));
-  const sharedArray = new Float64Array(sharedBuffer);
-  const frameSets = await Promise.all(gifUrls.map(loadGifAsSpritesheet));
-  const geometry = new THREE.SphereGeometry(5, 32, 32);
-  const angleBetweenSpheres = (2 * Math.PI) / gifUrls.length;
 
-  frameSets.forEach((frameSet, index) => {
-    const [spritesheetTexture, frames] = frameSet;
+  const spheres = [];
+  const frameSets = [];
+
+  for (const url of urls) {
+    const [spritesheetTexture, frames] = await loadGifAsSpritesheet(url);
+
+    const geometry = new THREE.SphereGeometry(5, 32, 32);
     const material = new THREE.MeshBasicMaterial({ map: spritesheetTexture });
     const sphere = new THREE.Mesh(geometry, material);
-    const angle = angleBetweenSpheres * index;
-    sphere.position.set(circleRadius * Math.cos(angle), 0, circleRadius * Math.sin(angle));
-    scene.add(sphere);
+
     spheres.push(sphere);
+    frameSets.push(frames);
+    scene.add(sphere);
+  }
+
+  // Position spheres in a horizontal circle
+  const circleRadius = 15;
+  const angleBetweenSpheres = (2 * Math.PI) / spheres.length;
+  spheres.forEach((sphere, index) => {
+    sphere.position.x = circleRadius * Math.cos(index * angleBetweenSpheres);
+    sphere.position.z = circleRadius * Math.sin(index * angleBetweenSpheres);
   });
 
-  worker.postMessage({
-    sharedBuffer,
-    spheresCount: spheres.length,
-    angleBetweenSpheres,
-    rotationSpeed,
-    frameSets: frameSets.map((frameSet) => frameSet.map((frame) => ({ delay: frame.delay }))),
-  });
-  
+  camera.position.z = 25;
+  camera.position.y = 15;
+  camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+  const clock = new THREE.Clock();
+
+  const currentFrames = new Array(urls.length).fill(0);
+  const frameElapsedTimes = new Array(urls.length).fill(0);
+  let rotationAngle = 0;
+  const rotationSpeed = 0.01;
+
   const animate = () => {
     requestAnimationFrame(animate);
-  
+
+    const deltaTime = clock.getDelta() * 1000; // Convert to milliseconds
+
     spheres.forEach((sphere, index) => {
-      sphere.position.set(sharedArray[1 + gifUrls.length * 3 + index * 2], 0, sharedArray[1 + gifUrls.length * 3 + index * 2 + 1]);
-      if (sphere.material.map) {
-        sphere.material.map.offset.x = sharedArray[1 + gifUrls.length + index] / frameSets[index].length;
+      const frames = frameSets[index];
+      const frameDelay = frames[currentFrames[index]].delay || 100;
+      if (frameElapsedTimes[index] >= frameDelay) {
+        currentFrames[index] = (currentFrames[index] + 1) % frames.length;
+        sphere.material.map.offset.x = currentFrames[index] / frames.length;
+        frameElapsedTimes[index] = 0;
+      } else {
+        frameElapsedTimes[index] += deltaTime;
       }
     });
-    if(skyMesh){
-      skyMesh.rotation.y -= 0.001;
-    }
+
+    // Rotate the circle of spheres
+    rotationAngle += rotationSpeed;
+    spheres.forEach((sphere, index) => {
+      const angle = index * angleBetweenSpheres + rotationAngle;
+      sphere.position.x = circleRadius * Math.cos(angle);
+      sphere.position.z = circleRadius * Math.sin(angle);
+      sphere.rotation.x += 0.01;
+      sphere.rotation.y += 0.01;      
+      if(skyMesh){
+        skyMesh.rotation.y -= 0.001;
+      }
+    });
+
     renderer.render(scene, camera);
   };
-  
 
   animate();
 };
 
-
-
 export const createScene = (el) => {
-
-
-  loadWorker();
-
   loadSkybox();
   createSpheresWithGifTextures([
     'starwarscats.gif',
@@ -152,5 +159,6 @@ export const createScene = (el) => {
     'star-wars-tie-fighter.gif',
     'sabers.gif',
     'yay.gif'
-  ],15);
+  ]);
 };
+

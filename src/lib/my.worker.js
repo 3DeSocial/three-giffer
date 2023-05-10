@@ -13,9 +13,9 @@ self.onmessage = (event) => {
 console.log(event.data);
   const clock = new THREE.Clock();
 
-  const updatePositionsAndOffsets = () => {
-    const deltaTime = clock.getDelta();
-    const circleRadius = 15;
+  const   updatePositionsAndOffsets = () => {
+    const deltaTime = clock.getDelta()
+    const circleRadius = 15;;
     sharedArray[0] += deltaTime;
 
     for (let i = 0; i < spheresCount; i++) {
@@ -26,7 +26,8 @@ console.log(event.data);
       sharedArray[1 + spheresCount * 3 + i * 2] = x;
       sharedArray[1 + spheresCount * 3 + i * 2 + 1] = z;
 
-      const frameDuration = frameSets[i][0].delay;
+      const frameDuration = frameSets[i][0].delay | 100;
+      console.log('frameDuration: ',frameDuration);;
       sharedArray[1 + spheresCount + i] = (sharedArray[1 + spheresCount + i] + deltaTime) % (frameSets[i].length * frameDuration);
     }
 

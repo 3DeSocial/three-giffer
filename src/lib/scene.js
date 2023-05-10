@@ -99,9 +99,7 @@ const createSpheresWithGifTextures = async (gifUrls, circleRadius, sphereDiamete
   const gifFrameSets = await Promise.all(gifUrls.map(loadGifAsSpritesheet));
   const geometry = new THREE.SphereGeometry(5, 32, 32);
 
-  const circleCircumference = 2 * Math.PI * circleRadius;
-  const numberOfPositions = circleCircumference / (sphereDiameter + distanceBetweenSpheres);
-  const angleBetweenSpheres = (2 * Math.PI) / numberOfPositions;
+  const angleBetweenSpheres = (2 * Math.PI) / gifUrls.length;
 
   let frameSets = [];
   gifFrameSets.forEach((frameSet, index) => {
@@ -179,5 +177,5 @@ export const createScene = (el) => {
     'star-wars-tie-fighter.gif',
     'sabers.gif',
     'yay.gif'
-  ],15, 5, 5);
+  ],15, 5, 10);
 };

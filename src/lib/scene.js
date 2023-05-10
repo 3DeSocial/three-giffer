@@ -96,9 +96,7 @@ const createSpheresWithGifTextures = async (gifUrls, circleRadius) => {
   const spheres = [];
   const sharedBuffer = new SharedArrayBuffer(Float64Array.BYTES_PER_ELEMENT * (1 + gifUrls.length * 5));
   const sharedArray = new Float64Array(sharedBuffer);
-console.log('load spritesheets')
   const frameSets = await Promise.all(gifUrls.map(loadGifAsSpritesheet));
-console.log('frameSets: ',frameSets);
   const geometry = new THREE.SphereGeometry(5, 32, 32);
   const angleBetweenSpheres = (2 * Math.PI) / gifUrls.length;
 
@@ -106,7 +104,6 @@ console.log('frameSets: ',frameSets);
     const texture = frames.texture;
     const material = new THREE.MeshBasicMaterial({ map: texture });
     const sphere = new THREE.Mesh(geometry, material);
-
     const angle = angleBetweenSpheres * index;
     sphere.position.set(circleRadius * Math.cos(angle), 0, circleRadius * Math.sin(angle));
 
@@ -117,7 +114,6 @@ console.log('frameSets: ',frameSets);
   worker.postMessage({
     sharedBuffer,
     spheresCount: spheres.length,
-    circleRadius,
     angleBetweenSpheres,
     rotationSpeed,
     frameSets: frameSets.map((frameSet) => frameSet.map((frame) => ({ delay: frame.delay }))),
@@ -130,6 +126,8 @@ console.log('frameSets: ',frameSets);
       sphere.position.set(sharedArray[1 + gifUrls.length * 3 + index * 2], 0, sharedArray[1 + gifUrls.length * 3 + index * 2 + 1]);
       if (sphere.material.map) {
         sphere.material.map.offset.x = sharedArray[1 + gifUrls.length + index] / frameSets[index].length;
+      } else {
+        console.log('no material map');
       }
     });
   
@@ -154,5 +152,5 @@ export const createScene = (el) => {
     'star-wars-tie-fighter.gif',
     'sabers.gif',
     'yay.gif'
-  ]);
+  ],15);
 };

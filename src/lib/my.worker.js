@@ -5,7 +5,6 @@ self.onmessage = (event) => {
   const {
     sharedBuffer,
     spheresCount,
-    circleRadius,
     angleBetweenSpheres,
     rotationSpeed,
     frameSets,
@@ -16,6 +15,7 @@ console.log(event.data);
 
   const updatePositionsAndOffsets = () => {
     const deltaTime = clock.getDelta();
+    const circleRadius = 15;
     sharedArray[0] += deltaTime;
 
     for (let i = 0; i < spheresCount; i++) {

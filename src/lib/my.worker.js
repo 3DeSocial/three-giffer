@@ -1,21 +1,77 @@
 import * as THREE from 'three';
 
+import { parseGIF, decompressFrames } from 'gifuct-js';
+
+const prepareGifs = async (gifUrls) => {
+  console.log('worker gifUrls: ',gifUrls);
+  try {
+    const spritesheets = await Promise.all(gifUrls.map(loadSpritesheet));
+    const transferableSpritesheets = spritesheets.map((spritesheetData) => {
+  
+      return {spriteSheet:spritesheetData[0].transferToImageBitmap(),frameCount:spritesheetData[1]}
+    });
+
+    self.postMessage({method: 'prepareGifs',payload: transferableSpritesheets});
+  } catch (error) {
+    console.error('Error loading GIFs:', error);
+  }
+};
+
+const fetchGifData = async (url) => {
+
+  return await fetch(url);;
+};
+
+const createSpritesheet = (frames) => {
+  const offscreenCanvas = new OffscreenCanvas(frames[0].dims.width * frames.length, frames[0].dims.height);
+  const ctx = offscreenCanvas.getContext('2d');
+  
+  frames.forEach((frame, index) => {
+    const frameImageData = new ImageData(
+      new Uint8ClampedArray(frame.patch.buffer),
+      frame.dims.width,
+      frame.dims.height
+    );
+    ctx.putImageData(frameImageData, index * frame.dims.width, 0);
+  });
+  
+  return offscreenCanvas;
+};
+
+const loadSpritesheet = async (gifUrl) => {
+  const response = await fetch(gifUrl);
+  const buffer = await response.arrayBuffer();
+  const gif = parseGIF(buffer);
+  const frames = decompressFrames(gif, true);
+  const spritesheetCanvas = createSpritesheet(frames);
+  return [spritesheetCanvas, frames.length];
+};
+
 self.onmessage = (event) => {
-  console.log('message received');
+
+  switch(event.data.method){
+    case 'animate':
+      animate(event.data.data);
+    break;
+    case 'prepareGifs':
+      prepareGifs(event.data.data);
+    break;
+  }
+}
+
+const animate = (data)=>{
   const {
     sharedBuffer,
     spheresCount,
     angleBetweenSpheres,
     rotationSpeed,
-    frameSets,
+    frameSetLengths,
     sphereDiameter,
     distanceBetweenSpheres
-  } = event.data;
+  } = data;
   const sharedArray = new Float64Array(sharedBuffer);
   const clock = new THREE.Clock();
-console.log('spheresCount: ',spheresCount);
-console.log('sphereDiameter: ',sphereDiameter);
-console.log('distanceBetweenSpheres: ',distanceBetweenSpheres);
+
 
   const frameSpeedFactor = 0.05;
   const circleRadius = (sphereDiameter + distanceBetweenSpheres) * spheresCount / (2 * Math.PI);
@@ -35,7 +91,7 @@ console.log('distanceBetweenSpheres: ',distanceBetweenSpheres);
       sharedArray[sphereZIndex] = circleRadius * Math.sin(angle);
 
       const frameElapsedIndex = 1 + spheresCount + i;
-      const frameIndex = Math.floor(elapsedTime / frameSpeedFactor) % frameSets[i].length;
+      const frameIndex = Math.floor(elapsedTime / frameSpeedFactor) % frameSetLengths[i];
       sharedArray[frameElapsedIndex] = frameIndex;
     }
 

@@ -4,11 +4,21 @@ import workerURL from '$lib/my.worker.js?url';
 const scene = new THREE.Scene();
 let skyMesh = null;
 let worker = null;
+let camera = null, renderer = null;
 const loadWorker = async () => {
 
   worker = new Worker(workerURL, { type: "module" });
-};
 
+    worker.onmessage = (event) => {
+      console.log('event: ',event);
+    switch(event.data.method){
+      case 'sharedArrayUpdate':
+      break;
+      case 'prepareGifs':
+        startAnimation(event.data.payload);
+      } 
+  }
+}
 
 const loadSkybox = ()=>{
     let that = this;
@@ -44,42 +54,8 @@ const loadSkybox = ()=>{
     }
 }
 
-
-const createSpritesheet = (frames) => {
-  const spritesheetCanvas = document.createElement('canvas');
-  spritesheetCanvas.width = frames[0].dims.width * frames.length;
-  spritesheetCanvas.height = frames[0].dims.height;
-  spritesheetCanvas.style.display = 'none';
-  const ctx = spritesheetCanvas.getContext('2d');
-
-  frames.forEach((frame, index) => {
-    const frameImageData = new ImageData(
-      new Uint8ClampedArray(frame.patch.buffer),
-      frame.dims.width,
-      frame.dims.height
-    );
-    ctx.putImageData(frameImageData, index * frame.dims.width, 0);
-  });
-
-  return spritesheetCanvas;
-};
-
-const loadGifAsSpritesheet = async (url) => {
-  const response = await fetch(url);
-  const buffer = await response.arrayBuffer();
-  const gif = parseGIF(buffer);
-  const frames = decompressFrames(gif, true);
-
-  const spritesheetCanvas = createSpritesheet(frames);
-  const spritesheetTexture = new THREE.CanvasTexture(spritesheetCanvas);
-  spritesheetTexture.repeat.set(1 / frames.length, 1);
-
-  return [spritesheetTexture, frames];
-};
-
-const createSpheresWithGifTextures = async (gifUrls, circleRadius, sphereDiameter, distanceBetweenSpheres) => {
-
-  const camera = new THREE.PerspectiveCamera(
+const initScene = ()=>{
+  camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
     0.1,
@@ -88,23 +64,33 @@ const createSpheresWithGifTextures = async (gifUrls, circleRadius, sphereDiamete
   camera.position.z = 50;
   camera.position.y = 15;  
   camera.lookAt(new THREE.Vector3(0,0,0));
-  const renderer = new THREE.WebGLRenderer();
+  renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
+  document.body.appendChild(renderer.domElement);  
+}
 
+const startAnimation = async (spriteSheetData) => {
+  let circleRadius = 15,sphereDiameter = 5, distanceBetweenSpheres = 10;
   let rotationSpeed = 1; 
   const spheres = [];
-  const sharedBuffer = new SharedArrayBuffer(Float64Array.BYTES_PER_ELEMENT * (1 + gifUrls.length * 5));
+  const sharedBuffer = new SharedArrayBuffer(Float64Array.BYTES_PER_ELEMENT * (1 + spriteSheetData.length * 5));
   const sharedArray = new Float64Array(sharedBuffer);
-  const gifFrameSets = await Promise.all(gifUrls.map(loadGifAsSpritesheet));
+
+
   const geometry = new THREE.SphereGeometry(5, 32, 32);
 
-  const angleBetweenSpheres = (2 * Math.PI) / gifUrls.length;
+  const angleBetweenSpheres = (2 * Math.PI) / spriteSheetData.length;
 
-  let frameSets = [];
-  gifFrameSets.forEach((frameSet, index) => {
-    const [spritesheetTexture, frames] = frameSet;
-    frameSets.push(frames);
+  let frameSetLengths = [];
+  spriteSheetData.forEach((spriteSheet, index) => {
+
+    const imageBitmap = spriteSheet.spriteSheet;
+ 
+    const spritesheetTexture = new THREE.CanvasTexture(imageBitmap);
+    spritesheetTexture.needsUpdate = true;    
+
+    const frameCount = spriteSheet.frameCount; 
+    frameSetLengths.push(frameCount);
 
     const material = new THREE.MeshBasicMaterial({ map: spritesheetTexture });
     const sphere = new THREE.Mesh(geometry, material);
@@ -114,23 +100,26 @@ const createSpheresWithGifTextures = async (gifUrls, circleRadius, sphereDiamete
     spheres.push(sphere);
   });
 
-  worker.postMessage({
-    sharedBuffer,
-    spheresCount: spheres.length,
-    angleBetweenSpheres,
-    rotationSpeed,
-    frameSets,
-    sphereDiameter,
-    distanceBetweenSpheres
-  });
+  worker.postMessage({method:'animate',
+    data:{
+      sharedBuffer,
+      spheresCount: spheres.length,
+      angleBetweenSpheres,
+      rotationSpeed,
+      frameSetLengths,
+      sphereDiameter,
+      distanceBetweenSpheres
+    }}
+  );
+
 
   const animate = () => {
     requestAnimationFrame(animate);
 
     spheres.forEach((sphere, index) => {
-      sphere.position.set(sharedArray[1 + gifUrls.length * 3 + index * 2], 0, sharedArray[1 + gifUrls.length * 3 + index * 2 + 1]);
+      sphere.position.set(sharedArray[1 + spheres.length * 3 + index * 2], 0, sharedArray[1 + spheres.length * 3 + index * 2 + 1]);
       if (sphere.material.map) {
-        sphere.material.map.offset.x = sharedArray[1 + gifUrls.length + index] / frameSets[index].length;
+        sphere.material.map.offset.x = sharedArray[1 + spheres.length + index] / frameSetLengths[index];
       }
     });
 
@@ -149,33 +138,39 @@ export const createScene = (el) => {
 
 
   loadWorker();
-
+  initScene();
   loadSkybox();
-  createSpheresWithGifTextures([
-    'starwarscats.gif',
-    'dankata.gif',
-    'star-wars-tie-fighter.gif',
-    'sabers.gif',
-    'yay.gif',
-    'starwarscats.gif',
-    'dankata.gif',
-    'star-wars-tie-fighter.gif',
-    'sabers.gif',
-    'yay.gif',
-    'starwarscats.gif',
-    'dankata.gif',
-    'star-wars-tie-fighter.gif',
-    'sabers.gif',
-    'yay.gif',
-    'starwarscats.gif',
-    'dankata.gif',
-    'star-wars-tie-fighter.gif',
-    'sabers.gif',
-    'yay.gif',
-    'starwarscats.gif',
-    'dankata.gif',
-    'star-wars-tie-fighter.gif',
-    'sabers.gif',
-    'yay.gif'
-  ],15, 5, 10);
+
+  
+
+  let gifUrls = [
+    '/starwarscats.gif',
+    '/dankata.gif',
+    '/star-wars-tie-fighter.gif',
+    '/sabers.gif',
+    '/yay.gif',
+    '/starwarscats.gif',
+    '/dankata.gif',
+    '/star-wars-tie-fighter.gif',
+    '/sabers.gif',
+    '/yay.gif',
+    '/starwarscats.gif',
+    '/dankata.gif',
+    '/star-wars-tie-fighter.gif',
+    '/sabers.gif',
+    '/yay.gif',
+    '/starwarscats.gif',
+    '/dankata.gif',
+    '/star-wars-tie-fighter.gif',
+    '/sabers.gif',
+    '/yay.gif',
+    '/starwarscats.gif',
+    '/dankata.gif',
+    '/star-wars-tie-fighter.gif',
+    '/sabers.gif',
+    '/yay.gif'
+  ];
+
+  worker.postMessage({method:'prepareGifs',
+  data:gifUrls});    
 };

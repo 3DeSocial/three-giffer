@@ -88,7 +88,22 @@ const startAnimation = async (spriteSheetData) => {
  
     const spritesheetTexture = new THREE.CanvasTexture(imageBitmap);
     spritesheetTexture.needsUpdate = true;    
+/*
+  // Convert the spritesheet texture to a data URL
+  const canvas = document.createElement('canvas');
+  canvas.width = spritesheetTexture.image.width;
+  canvas.height = spritesheetTexture.image.height;
+  const context = canvas.getContext('2d');
+  context.drawImage(spritesheetTexture.image, 0, 0);
+  const dataURL = canvas.toDataURL();
 
+  // Create an <img> element and set its src attribute to the data URL
+  const img = document.createElement('img');
+  img.src = dataURL;
+
+  // Append the <img> element to the document body for debugging
+  document.body.appendChild(img);
+*/
     const frameCount = spriteSheet.frameCount; 
     frameSetLengths.push(frameCount);
 

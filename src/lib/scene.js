@@ -4,7 +4,7 @@ import workerURL from '$lib/my.worker.js?url';
 const scene = new THREE.Scene();
 let skyMesh = null;
 let worker = null;
-let camera = null, renderer = null;
+let camera = null, renderer = null, spheresCount = null;
 const loadWorker = async () => {
 
   worker = new Worker(workerURL, { type: "module" });
@@ -116,11 +116,11 @@ const startAnimation = async (spriteSheetData) => {
     scene.add(sphere);
     spheres.push(sphere);
   });
-
+  spheresCount = spheres.length;
   worker.postMessage({method:'animate',
     data:{
       sharedBuffer,
-      spheresCount: spheres.length,
+      spheresCount,
       angleBetweenSpheres,
       rotationSpeed,
       frameSetLengths,
@@ -134,10 +134,15 @@ const startAnimation = async (spriteSheetData) => {
     requestAnimationFrame(animate);
 
     spheres.forEach((sphere, index) => {
+
+      const sphereXIndex = 1 + spheresCount * 3 + index * 2;
+      const sphereZIndex = 1 + spheresCount * 3 + index * 2 + 1;
+      const sphereYIndex = 1 + spheresCount * 3 + index * 2 + 2; 
+
       sphere.position.set(
-        sharedArray[1 + spheres.length * 3 + index * 2],
-        sharedArray[1 + spheres.length * 3 + index * 2 + 2], // Use the y-coordinate index
-        sharedArray[1 + spheres.length * 3 + index * 2 + 1]
+        sharedArray[sphereXIndex],
+        sharedArray[sphereZIndex], // Use the y-coordinate index
+        sharedArray[sphereYIndex]
       );
       if (sphere.material.map) {
         sphere.material.map.offset.x = sharedArray[1 + spheres.length + index] / frameSetLengths[index];

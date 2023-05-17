@@ -93,8 +93,8 @@ const animate = (data)=>{
       sharedArray[sphereZIndex] = circleRadius * Math.sin(angle);
   
       // Calculate y-coordinate using sine wave pattern
-      const amplitude = 100; // Amplitude of the sine wave
-      const frequency = 1; // Frequency of the sine wave
+      const amplitude = 0; // Amplitude of the sine wave
+      const frequency = 0; // Frequency of the sine wave
       const y = amplitude * Math.sin(elapsedTime * frequency);
       sharedArray[sphereYIndex] = y;
   

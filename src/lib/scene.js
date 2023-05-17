@@ -85,9 +85,11 @@ const startAnimation = async (spriteSheetData) => {
   spriteSheetData.forEach((spriteSheet, index) => {
 
     const imageBitmap = spriteSheet.spriteSheet;
- 
-    const spritesheetTexture = new THREE.CanvasTexture(imageBitmap);
+
+    const spritesheetTexture = new THREE.Texture(imageBitmap);
+    spritesheetTexture.repeat.set(1 / spriteSheetData.length, 1);
     spritesheetTexture.needsUpdate = true;    
+
 /*
   // Convert the spritesheet texture to a data URL
   const canvas = document.createElement('canvas');
@@ -132,7 +134,11 @@ const startAnimation = async (spriteSheetData) => {
     requestAnimationFrame(animate);
 
     spheres.forEach((sphere, index) => {
-      sphere.position.set(sharedArray[1 + spheres.length * 3 + index * 2], 0, sharedArray[1 + spheres.length * 3 + index * 2 + 1]);
+      sphere.position.set(
+        sharedArray[1 + spheres.length * 3 + index * 2],
+        sharedArray[1 + spheres.length * 3 + index * 2 + 2], // Use the y-coordinate index
+        sharedArray[1 + spheres.length * 3 + index * 2 + 1]
+      );
       if (sphere.material.map) {
         sphere.material.map.offset.x = sharedArray[1 + spheres.length + index] / frameSetLengths[index];
       }
@@ -183,7 +189,32 @@ export const createScene = (el) => {
     '/dankata.gif',
     '/star-wars-tie-fighter.gif',
     '/sabers.gif',
-    '/yay.gif'
+    '/yay.gif',
+    '/starwarscats.gif',
+    '/dankata.gif',
+    '/star-wars-tie-fighter.gif',
+    '/sabers.gif',
+    '/yay.gif',
+    '/starwarscats.gif',
+    '/dankata.gif',
+    '/star-wars-tie-fighter.gif',
+    '/sabers.gif',
+    '/yay.gif',
+    '/starwarscats.gif',
+    '/dankata.gif',
+    '/star-wars-tie-fighter.gif',
+    '/sabers.gif',
+    '/yay.gif',
+    '/starwarscats.gif',
+    '/dankata.gif',
+    '/star-wars-tie-fighter.gif',
+    '/sabers.gif',
+    '/yay.gif',
+    '/starwarscats.gif',
+    '/dankata.gif',
+    '/star-wars-tie-fighter.gif',
+    '/sabers.gif',
+    '/yay.gif'    
   ];
 
   worker.postMessage({method:'prepareGifs',

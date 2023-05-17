@@ -87,8 +87,17 @@ const animate = (data)=>{
 
       const sphereXIndex = 1 + spheresCount * 3 + i * 2;
       const sphereZIndex = 1 + spheresCount * 3 + i * 2 + 1;
+      const sphereYIndex = 1 + spheresCount * 3 + i * 2 + 2; // New index for y-coordinate
+  
       sharedArray[sphereXIndex] = circleRadius * Math.cos(angle);
       sharedArray[sphereZIndex] = circleRadius * Math.sin(angle);
+  
+      // Calculate y-coordinate using sine wave pattern
+      const amplitude = 100; // Amplitude of the sine wave
+      const frequency = 1; // Frequency of the sine wave
+      const y = amplitude * Math.sin(elapsedTime * frequency);
+      sharedArray[sphereYIndex] = y;
+  
 
       const frameElapsedIndex = 1 + spheresCount + i;
       const frameIndex = Math.floor(elapsedTime / frameSpeedFactor) % frameSetLengths[i];

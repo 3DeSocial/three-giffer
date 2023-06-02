@@ -5,14 +5,17 @@ import { parseGIF, decompressFrames } from 'gifuct-js';
 const prepareGifs = async (gifUrls) => {
   console.log('worker gifUrls: ',gifUrls);
   try {
-    const spritesheets = await Promise.all(gifUrls.map(loadSpritesheet));
-    const transferableSpritesheets = spritesheets.map((spritesheetData) => {
+  const spritesheets = await Promise.allSettled(gifUrls.map(loadSpritesheet));
+  const successfulSpritesheets = spritesheets.filter(result => result.status === 'fulfilled').map(result => result.value);
+
+    const transferableSpritesheets = successfulSpritesheets.map((spritesheetData) => {
   
       return {spriteSheet:spritesheetData[0].transferToImageBitmap(),frameCount:spritesheetData[1]}
     });
 
     self.postMessage({method: 'prepareGifs',payload: transferableSpritesheets});
   } catch (error) {
+    console.log(error);
     console.error('Error loading GIFs:', error);
   }
 };
@@ -32,6 +35,10 @@ const createSpritesheet = (frames) => {
       frame.dims.width,
       frame.dims.height
     );
+   /* console.log('looped frames ok');
+    console.log(ctx);
+    console.log(frameImageData);
+    console.log(frame.dims.width);*/
     ctx.putImageData(frameImageData, index * frame.dims.width, 0);
   });
   

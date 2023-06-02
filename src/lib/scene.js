@@ -170,7 +170,6 @@ export const createScene = (el) => {
   
 
   let gifUrls = [
-    '/starwarscats.gif',
     '/dankata.gif',
     '/star-wars-tie-fighter.gif',
     '/sabers.gif',
